@@ -49,7 +49,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DLLAMA_NATIVE=OFF -DLLAMA_BUILD_SERVER=ON -DLLAMA_CUBLAS=ON -DLLAMA_CUDA_FORCE_DMMV=TRUE -DLLAMA_CUDA_DMMV_X=64 -DLLAMA_CUDA_MMV_Y=4 -DLLAMA_CUDA_F16=TRUE -DLLAMA_CUDA_FORCE_MMQ=ON -DBUILD_SHARED_LIBS=TRUE
+          cmake .. -DLLAMA_NATIVE=OFF -DLLAMA_BUILD_SERVER=ON -DLLAMA_CUBLAS=ON -DLLAMA_CUDA_F16=TRUE -DLLAMA_CUDA_FORCE_MMQ=ON -DBUILD_SHARED_LIBS=TRUE
           cmake --build . --config Release -j ${env:NUMBER_OF_PROCESSORS}
 
       - name: Determine tag name
@@ -77,20 +77,6 @@ jobs:
         with:
           path: |
             llama-${{ steps.tag.outputs.name }}-bin-win-${{ matrix.build }}-cu${{ matrix.cuda }}-x64.zip
-
-      - name: Copy and pack Cuda runtime
-        run: |
-          echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
-          $dst='.\build\bin\cudart\'
-          robocopy "${{steps.cuda-toolkit.outputs.CUDA_PATH}}\bin" $dst cudart64_*.dll cublas64_*.dll cublasLt64_*.dll
-          7z a cudart-llama-bin-win-cu${{ matrix.cuda }}-x64.zip $dst\*
-
-      - name: Upload Cuda runtime
-        if: ${{ ( github.event_name == 'push' && github.ref == 'refs/heads/master' ) || github.event.inputs.create_release == 'true' }}
-        uses: actions/upload-artifact@v3
-        with:
-          path: |
-            cudart-llama-bin-win-cu${{ matrix.cuda }}-x64.zip
 
   release:
     if: ${{ ( github.event_name == 'push' && github.ref == 'refs/heads/master' ) || github.event.inputs.create_release == 'true' }}
@@ -128,7 +114,7 @@ jobs:
         id: create_release
         uses: anzz1/action-create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
         with:
           tag_name: ${{ steps.tag.outputs.name }}
 
@@ -136,7 +122,7 @@ jobs:
         id: upload_release
         uses: actions/github-script@v3
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{secrets.CI_TOKEN}}
           script: |
             const path = require('path');
             const fs = require('fs');
